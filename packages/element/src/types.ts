@@ -97,6 +97,25 @@ export type ExcalidrawEllipseElement = _ExcalidrawElementBase & {
   type: "ellipse";
 };
 
+export type ShapeIconPlacement =
+  | "center"
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right";
+
+export type ShapeIconPalette = {
+  stroke: string;
+  background: string;
+  text: string;
+};
+
+export type ShapeIconData = {
+  svg: string;
+  placement: ShapeIconPlacement;
+  palette: ShapeIconPalette | null;
+};
+
 export type ExcalidrawEmbeddableElement = _ExcalidrawElementBase &
   Readonly<{
     type: "embeddable";
