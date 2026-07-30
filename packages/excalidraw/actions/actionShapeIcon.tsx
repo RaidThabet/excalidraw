@@ -4,6 +4,7 @@ import {
   CaptureUpdateAction,
   newElementWith,
   getBoundTextElement,
+  redrawTextBoundingBox,
   getShapeIcon,
   isIconableElement,
   SHAPE_ICON_PLACEMENTS,
@@ -25,12 +26,15 @@ type IconActionValue =
   | { kind: "placement"; placement: ShapeIconPlacement }
   | { kind: "remove" };
 
+// The icon hugs its placement corner (see iconLayout). Push the bound text to
+// the OPPOSITE vertical edge on the SAME horizontal side, so icon and text stack
+// on the same side of the shape without overlapping.
 const VALIGN: Record<ShapeIconPlacement, "top" | "middle" | "bottom"> = {
-  center: "middle",
-  "top-left": "top",
-  "top-right": "top",
-  "bottom-left": "bottom",
-  "bottom-right": "bottom",
+  center: "bottom", // icon top-center -> text bottom
+  "top-left": "bottom",
+  "top-right": "bottom",
+  "bottom-left": "top",
+  "bottom-right": "top",
 };
 const HALIGN: Record<ShapeIconPlacement, "left" | "center" | "right"> = {
   center: "center",
@@ -89,11 +93,15 @@ export const actionSetShapeIcon = register<IconActionValue>({
         return newElementWith(el, patch);
       }
       if (boundText && el.id === boundText.id && nextIcon) {
-        return newElementWith(el, {
+        const nextText = newElementWith(el, {
           verticalAlign: VALIGN[nextIcon.placement],
           textAlign: HALIGN[nextIcon.placement],
           ...(value.kind === "set" ? { strokeColor: value.palette.text } : {}),
         } as Record<string, any>);
+        // recompute the bound text's position/size for the new alignment,
+        // otherwise the cached bounding box keeps it where it was.
+        redrawTextBoundingBox(nextText as any, target, app.scene);
+        return nextText;
       }
       return el;
     });

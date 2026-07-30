@@ -24,3 +24,18 @@ export const getShapeIcon = (
   isIconableElement(el)
     ? (el.customData?.icon as ShapeIconData | undefined)
     : undefined;
+
+/**
+ * Returns the sole iconable element in a selection, or null.
+ *
+ * A selection may legitimately contain more than one element while still
+ * targeting a single shape — e.g. a container plus its bound text element.
+ * We only care that exactly one *iconable* element is present, so bound text
+ * (a non-iconable "text" element) does not hide the icon panel.
+ */
+export const getSingleIconableTarget = (
+  elements: readonly ExcalidrawElement[],
+): ExcalidrawElement | null => {
+  const iconable = elements.filter(isIconableElement);
+  return iconable.length === 1 ? iconable[0] : null;
+};
