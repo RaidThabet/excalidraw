@@ -6,6 +6,7 @@ export {
   actionSendToBack,
 } from "./actionZindex";
 export { actionSelectAll } from "./actionSelectAll";
+export { actionSetShapeIcon } from "./actionShapeIcon";
 export { actionDuplicateSelection } from "./actionDuplicateSelection";
 export {
   actionChangeStrokeColor,

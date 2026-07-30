@@ -55,6 +55,7 @@ export type ActionName =
   | "bringToFront"
   | "copyStyles"
   | "selectAll"
+  | "setShapeIcon"
   | "pasteStyles"
   | "gridMode"
   | "zenMode"

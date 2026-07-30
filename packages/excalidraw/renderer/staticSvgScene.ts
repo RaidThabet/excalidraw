@@ -31,6 +31,7 @@ import {
 import { getContainingFrame } from "@excalidraw/element";
 
 import { getCornerRadius, isPathALoop } from "@excalidraw/element";
+import { getShapeIcon, getIconTextLayout } from "@excalidraw/element";
 
 import { ShapeCache } from "@excalidraw/element";
 
@@ -165,6 +166,23 @@ const renderElementToSvg = (
           offsetY || 0
         }) rotate(${degree} ${cx} ${cy})`,
       );
+
+      const shapeIcon = getShapeIcon(element);
+      if (shapeIcon?.svg) {
+        const { iconRect } = getIconTextLayout(element);
+        const image = svgRoot.ownerDocument.createElementNS(SVG_NS, "image");
+        image.setAttribute(
+          "href",
+          `data:image/svg+xml;base64,${btoa(
+            unescape(encodeURIComponent(shapeIcon.svg)),
+          )}`,
+        );
+        image.setAttribute("x", `${iconRect.x - element.x}`);
+        image.setAttribute("y", `${iconRect.y - element.y}`);
+        image.setAttribute("width", `${iconRect.w}`);
+        image.setAttribute("height", `${iconRect.h}`);
+        node.appendChild(image);
+      }
 
       const g = maybeWrapNodesInFrameClipPath(
         element,

@@ -5,6 +5,7 @@ import { Popover } from "radix-ui";
 import { CLASSES } from "@excalidraw/common";
 
 import { isArrowElement } from "@excalidraw/element";
+import { isIconableElement } from "@excalidraw/element";
 
 import type {
   ExcalidrawElement,
@@ -158,6 +159,10 @@ export const SelectedShapeActions = ({
       {predicates.backgroundColor && (
         <div>{renderAction("changeBackgroundColor")}</div>
       )}
+      {targetElements.length === 1 &&
+        isIconableElement(targetElements[0]) && (
+          <div>{renderAction("setShapeIcon")}</div>
+        )}
       {predicates.fill && renderAction("changeFillStyle")}
 
       {predicates.strokeWidth && renderAction("changeStrokeWidth")}

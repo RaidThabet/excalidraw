@@ -68,6 +68,10 @@ import { getCornerRadius } from "./utils";
 
 import { ShapeCache } from "./shape";
 
+import { getShapeIcon } from "./shapeIcon";
+import { getIconTextLayout } from "./iconLayout";
+import { getIconImage } from "./iconImageCache";
+
 import type {
   ExcalidrawElement,
   ExcalidrawTextElement,
@@ -331,6 +335,21 @@ const drawElementOnCanvas = (
       context.lineCap = "round";
 
       rc.draw(ShapeCache.generateElementShape(element, renderConfig));
+
+      const shapeIcon = getShapeIcon(element);
+      if (shapeIcon?.svg) {
+        const { iconRect } = getIconTextLayout(element);
+        const iconImg = getIconImage(shapeIcon.svg);
+        if (iconImg) {
+          context.drawImage(
+            iconImg,
+            iconRect.x - element.x,
+            iconRect.y - element.y,
+            iconRect.w,
+            iconRect.h,
+          );
+        }
+      }
       break;
     }
     case "arrow":
