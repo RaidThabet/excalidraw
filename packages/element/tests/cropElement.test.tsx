@@ -84,12 +84,13 @@ const compareCrops = (cropA: ImageCrop, cropB: ImageCrop) => {
 };
 
 describe("Enter and leave the crop editor", () => {
-  it("enter the editor by double clicking", () => {
+  // NOTE: double-clicking an image now adds/edits its label instead of
+  // cropping — crop is entered with Enter or the panel's crop button.
+  it("does not enter the editor by double clicking", () => {
     const image = h.elements[0];
     expect(h.state.croppingElementId).toBe(null);
     mouse.doubleClickOn(image);
-    expect(h.state.croppingElementId).not.toBe(null);
-    expect(h.state.croppingElementId).toBe(image.id);
+    expect(h.state.croppingElementId).toBe(null);
   });
 
   it("enter the editor by pressing enter", () => {
@@ -111,7 +112,7 @@ describe("Enter and leave the crop editor", () => {
 
   it("leave the editor by pressing escape", () => {
     const image = h.elements[0];
-    mouse.doubleClickOn(image);
+    Keyboard.keyDown(KEYS.ENTER);
     expect(h.state.croppingElementId).not.toBe(null);
 
     Keyboard.keyDown(KEYS.ESCAPE);
@@ -297,7 +298,7 @@ describe("Cropping and other features", async () => {
     const { naturalWidth, naturalHeight } =
       generateRandomNaturalWidthAndHeight(image);
 
-    mouse.doubleClickOn(image);
+    Keyboard.keyDown(KEYS.ENTER);
     expect(h.state.croppingElementId).not.toBe(null);
     UI.crop(image, "nw", naturalWidth, naturalHeight, [
       initialWidth / 2,
@@ -324,7 +325,7 @@ describe("Cropping and other features", async () => {
     const { naturalWidth, naturalHeight } =
       generateRandomNaturalWidthAndHeight(image);
 
-    mouse.doubleClickOn(image);
+    Keyboard.keyDown(KEYS.ENTER);
     expect(h.state.croppingElementId).not.toBe(null);
     UI.crop(image, "nw", naturalWidth, naturalHeight, [
       initialWidth / 2,

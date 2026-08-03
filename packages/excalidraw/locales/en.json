@@ -387,7 +387,7 @@
     "eraserRevert": "Hold {{shortcut}} to revert the elements marked for deletion",
     "firefox_clipboard_write": "This feature can likely be enabled by setting the \"dom.events.asyncClipboard.clipboardItem\" flag to \"true\". To change the browser flags in Firefox, visit the \"about:config\" page.",
     "disableSnapping": "Hold {{shortcut}} to disable snapping",
-    "enterCropEditor": "Double click the image or press {{shortcut}} to crop the image",
+    "enterCropEditor": "Double click the image to add a label, or press {{shortcut}} to crop it",
     "leaveCropEditor": "Click outside the image or press {{shortcut_1}} or {{shortcut_2}} to finish cropping"
   },
   "canvasError": {

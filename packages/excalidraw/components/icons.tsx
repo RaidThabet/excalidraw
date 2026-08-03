@@ -2592,3 +2592,22 @@ export const ShapeIconBottomRightIcon = shapeIconPlacementIcon(
   [7, 13, 16],
 );
 export const ShapeIconCenterIcon = shapeIconPlacementIcon([12, 9], [8, 16, 15]);
+
+// image label position: the image as a box, the label as a bar beside it
+const imageTextPositionIcon = (
+  box: [number, number, number, number],
+  bar: [number, number, number, number],
+) =>
+  createIcon(
+    <g strokeWidth={1.5}>
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <rect x={box[0]} y={box[1]} width={box[2]} height={box[3]} rx="1.5" />
+      <path d={`M${bar[0]} ${bar[1]}L${bar[2]} ${bar[3]}`} />
+    </g>,
+    tablerIconProps,
+  );
+
+export const ImageTextTopIcon = imageTextPositionIcon([4, 9, 16, 11], [7, 5, 17, 5]);
+export const ImageTextBottomIcon = imageTextPositionIcon([4, 4, 16, 11], [7, 19, 17, 19]);
+export const ImageTextLeftIcon = imageTextPositionIcon([9, 4, 11, 16], [5, 7, 5, 17]);
+export const ImageTextRightIcon = imageTextPositionIcon([4, 4, 11, 16], [19, 7, 19, 17]);

@@ -26,8 +26,10 @@ import { wrapText } from "./textWrapping";
 import {
   isBoundToContainer,
   isArrowElement,
+  isImageElement,
   isTextElement,
 } from "./typeChecks";
+import { computeImageTextPosition } from "./imageTextLayout";
 
 import { isNonDeletedElement } from ".";
 
@@ -105,7 +107,15 @@ export const redrawTextBoundingBox = (
     );
     const maxContainerWidth = getBoundTextMaxWidth(container, textElement);
 
-    if (!isArrowElement(container) && metrics.height > maxContainerHeight) {
+    // An image's label lives outside the image, so growing the image to fit
+    // the text would just distort the picture.
+    const growsToFitText = !isImageElement(container);
+
+    if (
+      growsToFitText &&
+      !isArrowElement(container) &&
+      metrics.height > maxContainerHeight
+    ) {
       const nextHeight = computeContainerDimensionForBoundText(
         metrics.height,
         container.type,
@@ -114,7 +124,7 @@ export const redrawTextBoundingBox = (
       updateOriginalContainerCache(container.id, nextHeight);
     }
 
-    if (metrics.width > maxContainerWidth) {
+    if (growsToFitText && metrics.width > maxContainerWidth) {
       const nextWidth = computeContainerDimensionForBoundText(
         metrics.width,
         container.type,
@@ -238,6 +248,10 @@ export const computeBoundTextPosition = (
       boundTextElement,
       elementsMap,
     );
+  }
+  if (isImageElement(container)) {
+    // an image's label sits outside the image rather than within its bounds
+    return computeImageTextPosition(container, boundTextElement);
   }
   const containerCoords = getContainerCoords(container);
   const maxContainerHeight = getBoundTextMaxHeight(container, boundTextElement);
@@ -452,6 +466,7 @@ const VALID_CONTAINER_TYPES = new Set([
   "rectangle",
   "ellipse",
   "diamond",
+  "image",
   "arrow",
 ]);
 
@@ -490,6 +505,10 @@ export const getBoundTextMaxWidth = (
       ARROW_LABEL_FONT_SIZE_TO_MIN_WIDTH_RATIO;
     return Math.max(ARROW_LABEL_WIDTH_FRACTION * width, minWidth);
   }
+  if (isImageElement(container)) {
+    // the label wraps to the image's width; it sits outside, so no padding
+    return width;
+  }
   // an inline icon eats into the row the text shares with it
   const iconInset = getIconTextInset(container);
   const reservedWidth = iconInset.left + iconInset.right;
@@ -522,6 +541,10 @@ export const getBoundTextMaxHeight = (
       return boundTextElement.height;
     }
     return height;
+  }
+  if (isImageElement(container)) {
+    // the label is outside the image, so the image's height never clips it
+    return boundTextElement.height;
   }
   // a stacked (centered) icon sits above the text and takes height from it
   const reservedHeight = getIconTextInset(container).top;

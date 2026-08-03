@@ -123,6 +123,9 @@ export type ShapeIconData = {
   isContainer?: boolean;
 };
 
+/** Where an image's label sits relative to the image itself. */
+export type ImageTextPosition = "top" | "bottom" | "left" | "right";
+
 export type ExcalidrawEmbeddableElement = _ExcalidrawElementBase &
   Readonly<{
     type: "embeddable";
@@ -297,6 +300,7 @@ export type ExcalidrawTextContainer =
   | ExcalidrawRectangleElement
   | ExcalidrawDiamondElement
   | ExcalidrawEllipseElement
+  | ExcalidrawImageElement
   | ExcalidrawArrowElement;
 
 export type ExcalidrawTextElementWithContainer = {

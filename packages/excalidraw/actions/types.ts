@@ -56,6 +56,7 @@ export type ActionName =
   | "copyStyles"
   | "selectAll"
   | "setShapeIcon"
+  | "imageTextPosition"
   | "pasteStyles"
   | "gridMode"
   | "zenMode"

@@ -107,3 +107,4 @@ export * from "./convertToShape";
 export * from "./shapeIcon";
 export * from "./iconLayout";
 export * from "./iconImageCache";
+export * from "./imageTextLayout";

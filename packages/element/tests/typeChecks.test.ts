@@ -68,14 +68,18 @@ describe("Test TypeChecks", () => {
       ).toBeFalsy();
     });
 
-    expect(
-      hasBoundTextElement(
-        API.createElement({
-          type: "image",
-          boundElements: [{ type: "text", id: "text-id" }],
-        }),
-      ),
-    ).toBeFalsy();
+    // images are text containers too — their text renders as a label outside
+    // the image (see imageTextLayout)
+    it("should return true for an image with bound text", () => {
+      expect(
+        hasBoundTextElement(
+          API.createElement({
+            type: "image",
+            boundElements: [{ type: "text", id: "text-id" }],
+          }),
+        ),
+      ).toBeTruthy();
+    });
   });
 });
 

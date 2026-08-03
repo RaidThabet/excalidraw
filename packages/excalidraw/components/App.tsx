@@ -7135,10 +7135,9 @@ class App extends React.Component<AppProps, AppState> {
       }
     }
 
-    if (selectedElements.length === 1 && isImageElement(selectedElements[0])) {
-      this.startImageCropping(selectedElements[0]);
-      return;
-    }
+    // NOTE: double-clicking an image adds/edits its label (handled by the
+    // text-binding path below). Cropping stays available from the properties
+    // panel's crop button.
 
     this.cursor.reset();
 

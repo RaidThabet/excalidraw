@@ -7,6 +7,7 @@ export {
 } from "./actionZindex";
 export { actionSelectAll } from "./actionSelectAll";
 export { actionSetShapeIcon } from "./actionShapeIcon";
+export { actionImageTextPosition } from "./actionImageTextPosition";
 export { actionDuplicateSelection } from "./actionDuplicateSelection";
 export {
   actionChangeStrokeColor,

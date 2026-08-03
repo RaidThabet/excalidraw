@@ -5,7 +5,7 @@ import { Popover } from "radix-ui";
 import { CLASSES } from "@excalidraw/common";
 
 import { isArrowElement } from "@excalidraw/element";
-import { getSingleIconableTarget } from "@excalidraw/element";
+import { getSingleIconableTarget, isImageElement } from "@excalidraw/element";
 
 import type {
   ExcalidrawElement,
@@ -162,6 +162,8 @@ export const SelectedShapeActions = ({
       {getSingleIconableTarget(targetElements) && (
         <div>{renderAction("setShapeIcon")}</div>
       )}
+      {targetElements.some(isImageElement) &&
+        renderAction("imageTextPosition")}
       {predicates.fill && renderAction("changeFillStyle")}
 
       {predicates.strokeWidth && renderAction("changeStrokeWidth")}
