@@ -26,15 +26,16 @@ type IconActionValue =
   | { kind: "placement"; placement: ShapeIconPlacement }
   | { kind: "remove" };
 
-// The icon hugs its placement corner (see iconLayout). Push the bound text to
-// the OPPOSITE vertical edge on the SAME horizontal side, so icon and text stack
-// on the same side of the shape without overlapping.
+// Corner placements read as one row — `[icon] text` / `text [icon]` — so the
+// text aligns to the icon's own edge and shares its row. getIconTextInset
+// reserves the icon's width so the two never overlap. `center` stacks the icon
+// above the text, which the inset handles vertically instead.
 const VALIGN: Record<ShapeIconPlacement, "top" | "middle" | "bottom"> = {
-  center: "bottom", // icon top-center -> text bottom
-  "top-left": "bottom",
-  "top-right": "bottom",
-  "bottom-left": "top",
-  "bottom-right": "top",
+  center: "middle",
+  "top-left": "top",
+  "top-right": "top",
+  "bottom-left": "bottom",
+  "bottom-right": "bottom",
 };
 const HALIGN: Record<ShapeIconPlacement, "left" | "center" | "right"> = {
   center: "center",
@@ -81,26 +82,32 @@ export const actionSetShapeIcon = register<IconActionValue>({
       app.scene.getNonDeletedElementsMap(),
     );
 
+    const containerPatch: Record<string, any> = {
+      customData: { ...target.customData, icon: nextIcon },
+    };
+    if (value.kind === "set") {
+      containerPatch.backgroundColor = value.palette.background;
+      containerPatch.strokeColor = value.palette.stroke;
+    }
+    // The text's layout depends on the icon's placement (getIconTextInset
+    // reserves the icon's room), so the container must already carry the NEW
+    // icon before we re-lay-out the text against it.
+    const nextContainer = newElementWith(target, containerPatch);
+
     const nextElements = elements.map((el) => {
       if (el.id === selectedId) {
-        const patch: Record<string, any> = {
-          customData: { ...el.customData, icon: nextIcon },
-        };
-        if (value.kind === "set") {
-          patch.backgroundColor = value.palette.background;
-          patch.strokeColor = value.palette.stroke;
-        }
-        return newElementWith(el, patch);
+        return nextContainer;
       }
-      if (boundText && el.id === boundText.id && nextIcon) {
+      if (boundText && el.id === boundText.id) {
         const nextText = newElementWith(el, {
-          verticalAlign: VALIGN[nextIcon.placement],
-          textAlign: HALIGN[nextIcon.placement],
+          // no icon -> back to stock centered text
+          verticalAlign: nextIcon ? VALIGN[nextIcon.placement] : "middle",
+          textAlign: nextIcon ? HALIGN[nextIcon.placement] : "center",
           ...(value.kind === "set" ? { strokeColor: value.palette.text } : {}),
         } as Record<string, any>);
-        // recompute the bound text's position/size for the new alignment,
-        // otherwise the cached bounding box keeps it where it was.
-        redrawTextBoundingBox(nextText as any, target, app.scene);
+        // recompute the bound text's position/size, otherwise the cached
+        // bounding box keeps it where it was.
+        redrawTextBoundingBox(nextText as any, nextContainer, app.scene);
         return nextText;
       }
       return el;

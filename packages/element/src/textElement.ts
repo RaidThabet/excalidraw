@@ -20,6 +20,7 @@ import {
 } from "./containerCache";
 import { LinearElementEditor } from "./linearElementEditor";
 
+import { getIconTextInset } from "./iconLayout";
 import { measureText } from "./textMeasurements";
 import { wrapText } from "./textWrapping";
 import {
@@ -355,8 +356,9 @@ export const getContainerCenter = (
 };
 
 export const getContainerCoords = (container: ExcalidrawElement) => {
-  let offsetX = BOUND_TEXT_PADDING;
-  let offsetY = BOUND_TEXT_PADDING;
+  const iconInset = getIconTextInset(container);
+  let offsetX = BOUND_TEXT_PADDING + iconInset.left;
+  let offsetY = BOUND_TEXT_PADDING + iconInset.top;
 
   if (container.type === "ellipse") {
     // The derivation of coordinates is explained in https://github.com/excalidraw/excalidraw/pull/6172
@@ -476,18 +478,25 @@ export const getBoundTextMaxWidth = (
       ARROW_LABEL_FONT_SIZE_TO_MIN_WIDTH_RATIO;
     return Math.max(ARROW_LABEL_WIDTH_FRACTION * width, minWidth);
   }
+  // an inline icon eats into the row the text shares with it
+  const iconInset = getIconTextInset(container);
+  const reservedWidth = iconInset.left + iconInset.right;
   if (container.type === "ellipse") {
     // The width of the largest rectangle inscribed inside an ellipse is
     // Math.round((ellipse.width / 2) * Math.sqrt(2)) which is derived from
     // equation of an ellipse -https://github.com/excalidraw/excalidraw/pull/6172
-    return Math.round((width / 2) * Math.sqrt(2)) - BOUND_TEXT_PADDING * 2;
+    return (
+      Math.round((width / 2) * Math.sqrt(2)) -
+      BOUND_TEXT_PADDING * 2 -
+      reservedWidth
+    );
   }
   if (container.type === "diamond") {
     // The width of the largest rectangle inscribed inside a rhombus is
     // Math.round(width / 2) - https://github.com/excalidraw/excalidraw/pull/6265
-    return Math.round(width / 2) - BOUND_TEXT_PADDING * 2;
+    return Math.round(width / 2) - BOUND_TEXT_PADDING * 2 - reservedWidth;
   }
-  return width - BOUND_TEXT_PADDING * 2;
+  return width - BOUND_TEXT_PADDING * 2 - reservedWidth;
 };
 
 export const getBoundTextMaxHeight = (
@@ -502,18 +511,24 @@ export const getBoundTextMaxHeight = (
     }
     return height;
   }
+  // a stacked (centered) icon sits above the text and takes height from it
+  const reservedHeight = getIconTextInset(container).top;
   if (container.type === "ellipse") {
     // The height of the largest rectangle inscribed inside an ellipse is
     // Math.round((ellipse.height / 2) * Math.sqrt(2)) which is derived from
     // equation of an ellipse - https://github.com/excalidraw/excalidraw/pull/6172
-    return Math.round((height / 2) * Math.sqrt(2)) - BOUND_TEXT_PADDING * 2;
+    return (
+      Math.round((height / 2) * Math.sqrt(2)) -
+      BOUND_TEXT_PADDING * 2 -
+      reservedHeight
+    );
   }
   if (container.type === "diamond") {
     // The height of the largest rectangle inscribed inside a rhombus is
     // Math.round(height / 2) - https://github.com/excalidraw/excalidraw/pull/6265
-    return Math.round(height / 2) - BOUND_TEXT_PADDING * 2;
+    return Math.round(height / 2) - BOUND_TEXT_PADDING * 2 - reservedHeight;
   }
-  return height - BOUND_TEXT_PADDING * 2;
+  return height - BOUND_TEXT_PADDING * 2 - reservedHeight;
 };
 
 /** retrieves text from text elements and concatenates to a single string */
