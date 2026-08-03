@@ -1,0 +1,49 @@
+{
+  "name": "excalidraw-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Desktop shell for this Excalidraw fork (shape icons, auto-palette, image labels)",
+  "homepage": "https://github.com/RaidThabet/excalidraw",
+  "author": {
+    "name": "Raid Thabet",
+    "email": "thabet.raid123@gmail.com"
+  },
+  "main": "main.js",
+  "scripts": {
+    "sync": "node scripts/sync-renderer.mjs",
+    "start": "yarn sync && electron .",
+    "smoke": "yarn sync && electron . --smoke",
+    "dist": "yarn sync && electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.raidthabet.excalidraw-desktop",
+    "productName": "Excalidraw Desktop",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "renderer/**/*"
+    ],
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Graphics",
+      "icon": "icon.png",
+      "maintainer": "Raid Thabet <thabet.raid123@gmail.com>"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "icon.png"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "icon.png"
+    }
+  }
+}
