@@ -2559,3 +2559,36 @@ export const settingsIcon = createIcon(
   </g>,
   tablerIconProps,
 );
+
+// shape icon placement: a dot for the icon, a line for the text beside it
+const shapeIconPlacementIcon = (
+  dot: [number, number],
+  line: [number, number, number],
+) =>
+  createIcon(
+    <g strokeWidth={1.5}>
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx={dot[0]} cy={dot[1]} r="1.75" fill="currentColor" />
+      <path d={`M${line[0]} ${line[2]}L${line[1]} ${line[2]}`} />
+    </g>,
+    tablerIconProps,
+  );
+
+export const ShapeIconTopLeftIcon = shapeIconPlacementIcon(
+  [7.5, 8],
+  [11, 17, 8],
+);
+export const ShapeIconTopRightIcon = shapeIconPlacementIcon(
+  [16.5, 8],
+  [7, 13, 8],
+);
+export const ShapeIconBottomLeftIcon = shapeIconPlacementIcon(
+  [7.5, 16],
+  [11, 17, 16],
+);
+export const ShapeIconBottomRightIcon = shapeIconPlacementIcon(
+  [16.5, 16],
+  [7, 13, 16],
+);
+export const ShapeIconCenterIcon = shapeIconPlacementIcon([12, 9], [8, 16, 15]);

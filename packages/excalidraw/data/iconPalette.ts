@@ -1,12 +1,13 @@
 import type { ShapeIconPalette } from "@excalidraw/element/types";
 
 export const rgbToHex = (r: number, g: number, b: number): string =>
-  "#" +
-  [r, g, b]
+  `#${[r, g, b]
     .map((v) =>
-      Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0"),
+      Math.max(0, Math.min(255, Math.round(v)))
+        .toString(16)
+        .padStart(2, "0"),
     )
-    .join("");
+    .join("")}`;
 
 const toHsl = (r: number, g: number, b: number) => {
   r /= 255;

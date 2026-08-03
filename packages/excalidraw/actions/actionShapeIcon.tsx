@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type JSX } from "react";
 
 import {
   CaptureUpdateAction,
@@ -19,9 +19,39 @@ import type {
   ShapeIconPlacement,
 } from "@excalidraw/element/types";
 
+import { CheckboxItem } from "../components/CheckboxItem";
+import { FilledButton } from "../components/FilledButton";
+import { RadioSelection } from "../components/RadioSelection";
+import {
+  LoadIcon,
+  TrashIcon,
+  ShapeIconCenterIcon,
+  ShapeIconTopLeftIcon,
+  ShapeIconTopRightIcon,
+  ShapeIconBottomLeftIcon,
+  ShapeIconBottomRightIcon,
+} from "../components/icons";
 import { sanitizeSvg, extractPalette } from "../data/svgIcon";
 
 import { register } from "./register";
+
+import "./ShapeIcon.scss";
+
+const PLACEMENT_ICONS: Record<ShapeIconPlacement, JSX.Element> = {
+  center: ShapeIconCenterIcon,
+  "top-left": ShapeIconTopLeftIcon,
+  "top-right": ShapeIconTopRightIcon,
+  "bottom-left": ShapeIconBottomLeftIcon,
+  "bottom-right": ShapeIconBottomRightIcon,
+};
+
+const PLACEMENT_LABELS: Record<ShapeIconPlacement, string> = {
+  center: "Center",
+  "top-left": "Top left",
+  "top-right": "Top right",
+  "bottom-left": "Bottom left",
+  "bottom-right": "Bottom right",
+};
 
 type IconActionValue =
   | { kind: "set"; svg: string; palette: ShapeIconPalette }
@@ -138,83 +168,82 @@ export const actionSetShapeIcon = register<IconActionValue>({
     };
 
     return (
-      <fieldset>
-        <legend>Icon</legend>
-        <textarea
-          style={{ width: "100%", minHeight: "3em", resize: "vertical" }}
-          placeholder="Paste SVG markup"
-          value={raw}
-          onChange={(event) => setRaw(event.target.value)}
-          onBlur={() => raw.trim() && applySvg(sanitizeSvg(raw))}
-        />
-        <input
-          type="file"
-          accept=".svg,image/svg+xml"
-          onChange={async (event) => {
-            const file = event.target.files?.[0];
-            if (file) {
-              applySvg(sanitizeSvg(await file.text()));
-            }
-          }}
-        />
-        {error && (
-          <div style={{ color: "var(--color-danger, #c92a2a)" }}>{error}</div>
-        )}
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "0.25rem",
-            marginTop: "0.5rem",
-          }}
-        >
-          {SHAPE_ICON_PLACEMENTS.map((placement) => (
-            <button
-              key={placement}
-              type="button"
-              disabled={!icon}
-              style={{
-                fontWeight: icon?.placement === placement ? "bold" : "normal",
-              }}
-              onClick={() => updateData({ kind: "placement", placement })}
-            >
-              {placement}
-            </button>
-          ))}
-        </div>
-        {icon && (
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.375rem",
-              marginTop: "0.5rem",
-            }}
-            title="Lay the text out next to the icon. Off keeps the text centered in the shape."
-          >
-            <input
-              type="checkbox"
-              checked={isContainerLayout(icon)}
-              onChange={(event) =>
-                updateData({
-                  kind: "container",
-                  isContainer: event.target.checked,
-                })
-              }
+      <>
+        <fieldset>
+          <legend>Icon</legend>
+          <div className="shape-icon-source">
+            <textarea
+              className="shape-icon-textarea"
+              placeholder="Paste SVG markup"
+              value={raw}
+              onChange={(event) => setRaw(event.target.value)}
+              onBlur={() => raw.trim() && applySvg(sanitizeSvg(raw))}
             />
-            Container (text next to icon)
-          </label>
-        )}
+            <label className="shape-icon-file" title="Upload an SVG file">
+              {LoadIcon}
+              Upload SVG
+              <input
+                type="file"
+                accept=".svg,image/svg+xml"
+                onChange={async (event) => {
+                  const file = event.target.files?.[0];
+                  if (file) {
+                    applySvg(sanitizeSvg(await file.text()));
+                  }
+                  // let the same file be picked again
+                  event.target.value = "";
+                }}
+              />
+            </label>
+            {error && <div className="shape-icon-error">{error}</div>}
+          </div>
+        </fieldset>
+
         {icon && (
-          <button
-            type="button"
-            style={{ marginTop: "0.5rem" }}
-            onClick={() => updateData({ kind: "remove" })}
-          >
-            Remove icon
-          </button>
+          <>
+            <fieldset>
+              <legend>Icon position</legend>
+              <div className="buttonList">
+                <RadioSelection<ShapeIconPlacement>
+                  group="shape-icon-placement"
+                  options={SHAPE_ICON_PLACEMENTS.map((placement) => ({
+                    value: placement,
+                    text: PLACEMENT_LABELS[placement],
+                    icon: PLACEMENT_ICONS[placement],
+                    testId: `shape-icon-placement-${placement}`,
+                  }))}
+                  value={icon.placement}
+                  onChange={(placement) =>
+                    updateData({ kind: "placement", placement })
+                  }
+                />
+              </div>
+            </fieldset>
+
+            <CheckboxItem
+              className="shape-icon-checkbox"
+              checked={isContainerLayout(icon)}
+              onChange={(isContainer) =>
+                updateData({ kind: "container", isContainer })
+              }
+            >
+              Text next to icon
+            </CheckboxItem>
+
+            <FilledButton
+              variant="outlined"
+              color="muted"
+              size="medium"
+              fullWidth
+              label="Remove icon"
+              icon={TrashIcon}
+              onClick={() => updateData({ kind: "remove" })}
+            >
+              Remove icon
+            </FilledButton>
+          </>
         )}
-      </fieldset>
+      </>
     );
   },
 });

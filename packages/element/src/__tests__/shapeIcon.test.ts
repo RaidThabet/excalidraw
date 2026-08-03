@@ -5,8 +5,7 @@ import {
   getSingleIconableTarget,
 } from "../shapeIcon";
 
-const base = (type: string, customData?: any) =>
-  ({ type, customData } as any);
+const base = (type: string, customData?: any) => ({ type, customData } as any);
 
 describe("shapeIcon helpers", () => {
   it("isIconableElement true only for rectangle/diamond/ellipse", () => {
