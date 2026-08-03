@@ -20,7 +20,7 @@ import {
 } from "./containerCache";
 import { LinearElementEditor } from "./linearElementEditor";
 
-import { getIconTextInset } from "./iconLayout";
+import { getIconTextInset, getInlineIconRow } from "./iconLayout";
 import { measureText } from "./textMeasurements";
 import { wrapText } from "./textWrapping";
 import {
@@ -253,6 +253,18 @@ export const computeBoundTextPosition = (
     y =
       containerCoords.y +
       (maxContainerHeight / 2 - boundTextElement.height / 2);
+  }
+  // Text sharing a row with the icon centers against the icon rather than
+  // hugging the row's top/bottom edge, so `[icon] text` lines up.
+  const inlineRow = getInlineIconRow(container);
+  if (inlineRow) {
+    const centered =
+      inlineRow.y + (inlineRow.height - boundTextElement.height) / 2;
+    const minY = containerCoords.y;
+    const maxY =
+      containerCoords.y +
+      Math.max(0, maxContainerHeight - boundTextElement.height);
+    y = Math.min(Math.max(centered, minY), maxY);
   }
   if (boundTextElement.textAlign === TEXT_ALIGN.LEFT) {
     x = containerCoords.x;

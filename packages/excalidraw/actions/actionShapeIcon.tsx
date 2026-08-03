@@ -6,6 +6,8 @@ import {
   getBoundTextElement,
   redrawTextBoundingBox,
   getShapeIcon,
+  getIconTextAlignment,
+  isContainerLayout,
   isIconableElement,
   SHAPE_ICON_PLACEMENTS,
 } from "@excalidraw/element";
@@ -24,26 +26,8 @@ import { register } from "./register";
 type IconActionValue =
   | { kind: "set"; svg: string; palette: ShapeIconPalette }
   | { kind: "placement"; placement: ShapeIconPlacement }
+  | { kind: "container"; isContainer: boolean }
   | { kind: "remove" };
-
-// Corner placements read as one row — `[icon] text` / `text [icon]` — so the
-// text aligns to the icon's own edge and shares its row. getIconTextInset
-// reserves the icon's width so the two never overlap. `center` stacks the icon
-// above the text, which the inset handles vertically instead.
-const VALIGN: Record<ShapeIconPlacement, "top" | "middle" | "bottom"> = {
-  center: "middle",
-  "top-left": "top",
-  "top-right": "top",
-  "bottom-left": "bottom",
-  "bottom-right": "bottom",
-};
-const HALIGN: Record<ShapeIconPlacement, "left" | "center" | "right"> = {
-  center: "center",
-  "top-left": "left",
-  "top-right": "right",
-  "bottom-left": "left",
-  "bottom-right": "right",
-};
 
 export const actionSetShapeIcon = register<IconActionValue>({
   name: "setShapeIcon",
@@ -64,18 +48,30 @@ export const actionSetShapeIcon = register<IconActionValue>({
     const selectedId = target.id;
     const prevIcon = getShapeIcon(target);
 
-    const nextIcon: ShapeIconData | undefined =
-      value.kind === "remove"
-        ? undefined
-        : value.kind === "set"
-        ? {
-            svg: value.svg,
-            placement: prevIcon?.placement ?? "center",
-            palette: value.palette,
-          }
-        : prevIcon
-        ? { ...prevIcon, placement: value.placement }
-        : undefined;
+    let nextIcon: ShapeIconData | undefined;
+    switch (value.kind) {
+      case "remove":
+        nextIcon = undefined;
+        break;
+      case "set":
+        nextIcon = {
+          svg: value.svg,
+          placement: prevIcon?.placement ?? "center",
+          palette: value.palette,
+          isContainer: prevIcon ? isContainerLayout(prevIcon) : true,
+        };
+        break;
+      case "placement":
+        nextIcon = prevIcon
+          ? { ...prevIcon, placement: value.placement }
+          : undefined;
+        break;
+      case "container":
+        nextIcon = prevIcon
+          ? { ...prevIcon, isContainer: value.isContainer }
+          : undefined;
+        break;
+    }
 
     const boundText = getBoundTextElement(
       target,
@@ -99,10 +95,13 @@ export const actionSetShapeIcon = register<IconActionValue>({
         return nextContainer;
       }
       if (boundText && el.id === boundText.id) {
+        // derived from the UPDATED container: container shapes align the text
+        // to the icon's edge, everything else keeps it centered
+        const { textAlign, verticalAlign } =
+          getIconTextAlignment(nextContainer);
         const nextText = newElementWith(el, {
-          // no icon -> back to stock centered text
-          verticalAlign: nextIcon ? VALIGN[nextIcon.placement] : "middle",
-          textAlign: nextIcon ? HALIGN[nextIcon.placement] : "center",
+          verticalAlign,
+          textAlign,
           ...(value.kind === "set" ? { strokeColor: value.palette.text } : {}),
         } as Record<string, any>);
         // recompute the bound text's position/size, otherwise the cached
@@ -183,6 +182,29 @@ export const actionSetShapeIcon = register<IconActionValue>({
             </button>
           ))}
         </div>
+        {icon && (
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.375rem",
+              marginTop: "0.5rem",
+            }}
+            title="Lay the text out next to the icon. Off keeps the text centered in the shape."
+          >
+            <input
+              type="checkbox"
+              checked={isContainerLayout(icon)}
+              onChange={(event) =>
+                updateData({
+                  kind: "container",
+                  isContainer: event.target.checked,
+                })
+              }
+            />
+            Container (text next to icon)
+          </label>
+        )}
         {icon && (
           <button
             type="button"

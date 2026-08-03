@@ -114,6 +114,13 @@ export type ShapeIconData = {
   svg: string;
   placement: ShapeIconPlacement;
   palette: ShapeIconPalette | null;
+  /**
+   * Whether the shape acts as a container: the text is laid out alongside the
+   * icon (`[icon] text`). When false the text stays centered in the shape and
+   * the icon just sits at its placement. Absent means true — icons predate the
+   * flag.
+   */
+  isContainer?: boolean;
 };
 
 export type ExcalidrawEmbeddableElement = _ExcalidrawElementBase &
