@@ -11,9 +11,10 @@
   "main": "main.js",
   "scripts": {
     "sync": "node scripts/sync-renderer.mjs",
-    "start": "yarn sync && electron .",
-    "smoke": "yarn sync && electron . --smoke",
-    "dist": "yarn sync && electron-builder"
+    "start": "yarn sync && electron . --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --class=excalidraw-desktop",
+    "smoke": "yarn sync && electron . --smoke --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --class=excalidraw-desktop",
+    "dist": "yarn sync && electron-builder",
+    "install-entry": "node scripts/install-desktop-entry.mjs"
   },
   "devDependencies": {
     "electron": "^33.2.0",
@@ -27,6 +28,7 @@
     },
     "files": [
       "main.js",
+      "icon.png",
       "renderer/**/*"
     ],
     "linux": {
@@ -35,7 +37,15 @@
       ],
       "category": "Graphics",
       "icon": "icon.png",
-      "maintainer": "Raid Thabet <thabet.raid123@gmail.com>"
+      "maintainer": "Raid Thabet <thabet.raid123@gmail.com>",
+      "executableArgs": [
+        "--ozone-platform-hint=auto",
+        "--enable-features=WaylandWindowDecorations",
+        "--class=excalidraw-desktop"
+      ],
+      "desktop": {
+        "StartupWMClass": "excalidraw-desktop"
+      }
     },
     "mac": {
       "target": "dmg",

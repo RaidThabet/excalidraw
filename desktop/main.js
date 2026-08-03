@@ -9,9 +9,59 @@ const path = require("node:path");
  * because a real origin keeps localStorage (where drawings live) stable.
  */
 const RENDERER_DIR = path.join(__dirname, "renderer");
+const ICON_PATH = path.join(__dirname, "icon.png");
 const SCHEME = "excalidraw";
 const ORIGIN = `${SCHEME}://app`;
 const SMOKE_TEST = process.argv.includes("--smoke");
+
+/**
+ * Identifies the window to the desktop environment. Wayland compositors match
+ * a window's app_id against an installed .desktop file to find its icon, so
+ * this has to agree with StartupWMClass in the desktop entry (see
+ * scripts/install-desktop-entry.mjs) or the window falls back to a generic
+ * icon.
+ */
+const APP_ID = "excalidraw-desktop";
+
+/**
+ * Chromium picks its Ozone platform and window class before this file runs, so
+ * app.commandLine.appendSwitch() is too late and silently does nothing — the
+ * window comes up on XWayland with class "excalidraw desktop", which matches no
+ * desktop entry, which is why the icon falls back to a generic one. The flags
+ * only work as real argv.
+ *
+ * "executableArgs" in package.json puts them in the packaged desktop entry, but
+ * running the AppImage directly bypasses that and execs the binary bare, so we
+ * relaunch ourselves once with the flags attached.
+ */
+const LINUX_DISPLAY_FLAGS = [
+  "--ozone-platform-hint=auto",
+  "--enable-features=WaylandWindowDecorations",
+  `--class=${APP_ID}`,
+];
+
+const RELAUNCH_GUARD = "EXCALIDRAW_DESKTOP_RELAUNCHED";
+
+const needsWaylandRelaunch =
+  process.platform === "linux" &&
+  !!process.env.WAYLAND_DISPLAY &&
+  !process.env[RELAUNCH_GUARD] &&
+  // the smoke test passes the flags itself and needs to own the exit code
+  !SMOKE_TEST &&
+  !process.argv.some((arg) => arg.startsWith("--ozone-platform"));
+
+if (needsWaylandRelaunch) {
+  require("node:child_process")
+    .spawn(process.execPath, [...process.argv.slice(1), ...LINUX_DISPLAY_FLAGS], {
+      detached: true,
+      stdio: "inherit",
+      env: { ...process.env, [RELAUNCH_GUARD]: "1" },
+    })
+    .unref();
+  app.exit(0);
+  // CommonJS wraps modules in a function, so this stops the rest from running
+  return;
+}
 
 const MIME_TYPES = new Map(
   Object.entries({
@@ -101,6 +151,9 @@ const createWindow = async () => {
     backgroundColor: "#121212",
     autoHideMenuBar: true,
     show: !SMOKE_TEST,
+    // used by X11/XWayland directly; on Wayland the icon comes from the
+    // matching desktop entry instead
+    icon: ICON_PATH,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -147,6 +200,11 @@ const runSmokeTest = async (win) => {
   const ok =
     probe.hasExcalidrawRoot && probe.canvasCount > 0 && probe.canvasWidth > 0;
 
+  // NOTE: no Wayland-vs-X11 probe here on purpose. Unix domain socket fds do
+  // not expose their peer path, so /proc/self/fd cannot tell the two apart, and
+  // an earlier attempt at it reported plausible-looking nonsense. To check the
+  // backend, look for the app in the X client list instead (see README) — a
+  // native Wayland window does not appear there at all.
   console.log(`smoke: ${JSON.stringify(probe)}`);
   console.log(ok ? "smoke: PASS" : "smoke: FAIL");
   app.exit(ok ? 0 : 1);
@@ -164,6 +222,8 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(async () => {
+    // keeps notifications and the task switcher attributed to the desktop entry
+    app.setName("Excalidraw Desktop");
     protocol.handle(SCHEME, serveRenderer);
 
     const win = await createWindow();
