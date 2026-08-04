@@ -14,6 +14,7 @@
     "start": "yarn sync && electron . --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --class=excalidraw-desktop",
     "smoke": "yarn sync && electron . --smoke --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --class=excalidraw-desktop",
     "dist": "yarn sync && electron-builder",
+    "rpm": "yarn dist && node scripts/build-rpm.mjs",
     "install-entry": "node scripts/install-desktop-entry.mjs"
   },
   "devDependencies": {
@@ -40,8 +41,7 @@
       "maintainer": "Raid Thabet <thabet.raid123@gmail.com>",
       "executableArgs": [
         "--ozone-platform-hint=auto",
-        "--enable-features=WaylandWindowDecorations",
-        "--class=excalidraw-desktop"
+        "--enable-features=WaylandWindowDecorations"
       ],
       "desktop": {
         "StartupWMClass": "excalidraw-desktop"

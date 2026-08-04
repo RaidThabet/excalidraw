@@ -81,7 +81,7 @@ const entry = `[Desktop Entry]
 Type=Application
 Name=Excalidraw Desktop
 Comment=Whiteboard with shape icons, auto-palette and image labels
-Exec="${appImage}" --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --class=${APP_ID} %U
+Exec=env CHROME_DESKTOP=${APP_ID}.desktop "${appImage}" --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --class=${APP_ID} %U
 Icon=${APP_ID}
 Terminal=false
 Categories=Graphics;

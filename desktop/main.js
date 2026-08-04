@@ -37,8 +37,28 @@ const APP_ID = "excalidraw-desktop";
 const LINUX_DISPLAY_FLAGS = [
   "--ozone-platform-hint=auto",
   "--enable-features=WaylandWindowDecorations",
-  `--class=${APP_ID}`,
 ];
+
+// Verified on KDE/Wayland: --class is IGNORED by Electron. It derives the X11
+// WM_CLASS from the app name, so passing --class=excalidraw-desktop still
+// produced WM_CLASS "Excalidraw Desktop". CHROME_DESKTOP (below) is what
+// actually sets the Wayland app_id, and that is what makes the icon resolve.
+//
+// Do NOT call app.setName() to force the app_id instead: the app name also
+// determines Electron's userData directory, so renaming it silently moves the
+// profile and the user's saved drawings appear to vanish.
+
+/**
+ * --class only sets the X11 WM_CLASS. On Wayland, Chromium derives the
+ * xdg_toplevel app_id from its "desktop name", which it reads from the
+ * CHROME_DESKTOP environment variable — so without this the Wayland window
+ * carries a default app_id, matches no desktop entry, and shows a generic icon
+ * even though the entry and hicolor icon are installed correctly.
+ */
+const DESKTOP_FILE = `${APP_ID}.desktop`;
+if (process.platform === "linux" && !process.env.CHROME_DESKTOP) {
+  process.env.CHROME_DESKTOP = DESKTOP_FILE;
+}
 
 const RELAUNCH_GUARD = "EXCALIDRAW_DESKTOP_RELAUNCHED";
 
@@ -55,7 +75,11 @@ if (needsWaylandRelaunch) {
     .spawn(process.execPath, [...process.argv.slice(1), ...LINUX_DISPLAY_FLAGS], {
       detached: true,
       stdio: "inherit",
-      env: { ...process.env, [RELAUNCH_GUARD]: "1" },
+      env: {
+        ...process.env,
+        [RELAUNCH_GUARD]: "1",
+        CHROME_DESKTOP: DESKTOP_FILE,
+      },
     })
     .unref();
   app.exit(0);
@@ -222,8 +246,6 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(async () => {
-    // keeps notifications and the task switcher attributed to the desktop entry
-    app.setName("Excalidraw Desktop");
     protocol.handle(SCHEME, serveRenderer);
 
     const win = await createWindow();

@@ -44,10 +44,35 @@ chmod +x "desktop/dist/Excalidraw Desktop-1.0.0.AppImage"
 `mac` (dmg) and `win` (nsis) targets are configured too, but each has to be
 built on that platform.
 
-**No rpm/deb target.** electron-builder bundles fpm 1.9.3 (2015), and the spec
-files it generates are rejected by RPM 6 shipped in Fedora 43 — `rpmbuild`
-exits 1. The AppImage is unaffected. To get an rpm you'd need a newer fpm than
-the bundled one.
+### RPM
+
+```bash
+yarn --cwd desktop rpm
+```
+
+Produces `desktop/dist/excalidraw-desktop-<version>-1.fc*.x86_64.rpm`, then:
+
+```bash
+sudo dnf install "desktop/dist/excalidraw-desktop-1.0.0-1.fc43.x86_64.rpm"
+```
+
+It installs to `/opt/excalidraw-desktop` with a `/usr/bin/excalidraw-desktop`
+symlink, a desktop entry, and the hicolor icon — so no `install-entry` step is
+needed for the rpm; the entry ships in the package.
+
+This does NOT use electron-builder's rpm target. That target shells out to a
+bundled fpm 1.9.3 (2015) whose generated spec files RPM 6 (Fedora 43) rejects —
+`rpmbuild` exits 1 with the metadata all correct. `scripts/build-rpm.mjs` writes
+the spec and calls `rpmbuild` directly instead, which sidesteps fpm entirely.
+
+Notes on the spec, since prebuilt Electron trees are awkward to package:
+
+- `debug_package`, `__os_install_post` and `__brp_check_rpaths` are disabled;
+  the default strip/lint pipeline chokes on Chromium's shipped libraries.
+- `AutoReqProv: no` with hand-written `Requires:`. Letting rpm derive
+  dependencies from ~300 MB of bundled libraries pulls in unresolvable sonames.
+- `chrome-sandbox` is installed `4755` — the Chromium sandbox helper needs
+  setuid root, or the app only starts with `--no-sandbox`.
 
 ## Desktop integration (icon + Wayland)
 
