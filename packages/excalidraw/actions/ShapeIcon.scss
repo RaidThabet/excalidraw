@@ -13,6 +13,12 @@
     gap: 0.25rem;
   }
 
+  // the section must never be wider than the panel that holds it
+  fieldset:has(.shape-icon-actions) {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   .shape-icon-action {
     flex: 1 1 0;
     min-width: 0;
@@ -108,16 +114,52 @@
     color: var(--color-danger);
   }
 
-  // five placements on one row; the default buttonList wraps them onto two,
-  // which made the icon controls taller than any native section
+  // The panel is fixed-width and narrow: anything that refuses to wrap gets
+  // clipped and drags a horizontal scrollbar onto the whole panel. Every row
+  // here wraps and is bounded by the panel width.
+  .shape-icon-actions,
+  .shape-icon-size,
   .buttonList.shape-icon-placements {
-    flex-wrap: nowrap;
-    gap: 0.25rem;
+    max-width: 100%;
+  }
+
+  // Everything wraps. Forcing the size row onto one line looked tidier but a
+  // range input will not compress past its intrinsic width, so the row spilled
+  // out and put a horizontal scrollbar on the whole panel — worse than a
+  // second line.
+  .shape-icon-actions,
+  .shape-icon-size,
+  .buttonList.shape-icon-placements {
+    flex-wrap: wrap;
+  }
+
+  // .selected-shape-actions raises specificity over the native .buttonList
+  // rule, whose 8px gap otherwise pushes the fifth button onto its own row
+  // (5 x 32px + 4 x 8px = 192px into a 172px panel).
+  .selected-shape-actions .buttonList.shape-icon-placements,
+  .buttonList.shape-icon-placements {
+    gap: 0.1875rem;
     margin-top: 0.5rem;
 
+    // native buttonList buttons are too wide for five to share this panel, so
+    // they wrapped 4 + 1; trimming the padding fits the set on one line.
+    // Wrapping stays allowed above, so a narrower panel degrades rather than
+    // clipping.
+    // The native rule pins these labels to 32px regardless of padding, and
+    // 5 x 32 + gaps is exactly the panel width — it fits by a hair, then
+    // sub-pixel rounding drops the fifth onto its own row. Set the width
+    // explicitly so there is real slack.
     label {
-      flex: 1 1 0;
+      box-sizing: border-box;
+      width: 1.75rem;
       min-width: 0;
+      height: 1.75rem;
+      padding: 0.1875rem;
+
+      svg {
+        width: 0.875rem;
+        height: 0.875rem;
+      }
     }
   }
 
@@ -128,7 +170,9 @@
     margin-top: 0.5rem;
 
     input[type="range"] {
-      flex: 1 1 auto;
+      flex: 1 1 3rem;
+      // browsers give range inputs a wide intrinsic size; without this the row
+      // cannot compress and wraps or overflows
       min-width: 0;
       accent-color: var(--color-primary);
     }

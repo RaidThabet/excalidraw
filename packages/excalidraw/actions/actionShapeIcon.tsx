@@ -254,9 +254,14 @@ export const actionSetShapeIcon = register<IconActionValue>({
               className={clsx("shape-icon-action", {
                 active: mode === "library",
               })}
+              title={
+                library.length > 0
+                  ? `${library.length} icons in your library`
+                  : "Add your own icons"
+              }
               onClick={() => setMode(mode === "library" ? null : "library")}
             >
-              Library{library.length > 0 ? ` (${library.length})` : ""}
+              Library
             </button>
             <label className="shape-icon-action" title="Upload a single SVG">
               Upload
