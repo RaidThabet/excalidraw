@@ -1,4 +1,5 @@
-import { useState, type JSX } from "react";
+import clsx from "clsx";
+import { useEffect, useMemo, useState, type JSX } from "react";
 
 import {
   CaptureUpdateAction,
@@ -6,9 +7,14 @@ import {
   getBoundTextElement,
   redrawTextBoundingBox,
   getShapeIcon,
+  getIconSize,
   getIconTextAlignment,
   isContainerLayout,
   isIconableElement,
+  preloadIconImage,
+  DEFAULT_SHAPE_ICON_PLACEMENT,
+  MAX_ICON_SIZE,
+  MIN_ICON_SIZE,
   SHAPE_ICON_PLACEMENTS,
 } from "@excalidraw/element";
 
@@ -31,11 +37,19 @@ import {
   ShapeIconBottomLeftIcon,
   ShapeIconBottomRightIcon,
 } from "../components/icons";
-import { sanitizeSvg, extractPalette } from "../data/svgIcon";
+import {
+  collectDroppedSvgs,
+  groupIconsByCategory,
+  importIcons,
+  listLibraryIcons,
+} from "../data/iconLibrary";
+import { sanitizeSvg, extractPalette, svgToDataUrl } from "../data/svgIcon";
 
 import { register } from "./register";
 
 import "./ShapeIcon.scss";
+
+import type { LibraryIcon } from "../data/iconLibrary";
 
 const PLACEMENT_ICONS: Record<ShapeIconPlacement, JSX.Element> = {
   center: ShapeIconCenterIcon,
@@ -57,6 +71,7 @@ type IconActionValue =
   | { kind: "set"; svg: string; palette: ShapeIconPalette }
   | { kind: "placement"; placement: ShapeIconPlacement }
   | { kind: "container"; isContainer: boolean }
+  | { kind: "size"; size: number | undefined }
   | { kind: "remove" };
 
 export const actionSetShapeIcon = register<IconActionValue>({
@@ -86,9 +101,10 @@ export const actionSetShapeIcon = register<IconActionValue>({
       case "set":
         nextIcon = {
           svg: value.svg,
-          placement: prevIcon?.placement ?? "center",
+          placement: prevIcon?.placement ?? DEFAULT_SHAPE_ICON_PLACEMENT,
           palette: value.palette,
           isContainer: prevIcon ? isContainerLayout(prevIcon) : true,
+          size: prevIcon?.size,
         };
         break;
       case "placement":
@@ -100,6 +116,9 @@ export const actionSetShapeIcon = register<IconActionValue>({
         nextIcon = prevIcon
           ? { ...prevIcon, isContainer: value.isContainer }
           : undefined;
+        break;
+      case "size":
+        nextIcon = prevIcon ? { ...prevIcon, size: value.size } : undefined;
         break;
     }
 
@@ -151,11 +170,38 @@ export const actionSetShapeIcon = register<IconActionValue>({
   PanelComponent: ({ appState, updateData, app }) => {
     const [error, setError] = useState<string | null>(null);
     const [raw, setRaw] = useState("");
+    const [library, setLibrary] = useState<LibraryIcon[]>([]);
+    const [search, setSearch] = useState("");
+    const [importing, setImporting] = useState(false);
+    const [dropActive, setDropActive] = useState(false);
 
     const selected = app.scene
       .getSelectedElements(appState)
       .filter((el: ExcalidrawElement) => isIconableElement(el));
-    const icon = selected.length === 1 ? getShapeIcon(selected[0]) : undefined;
+    const target = selected.length === 1 ? selected[0] : undefined;
+    const icon = target ? getShapeIcon(target) : undefined;
+
+    useEffect(() => {
+      let live = true;
+      listLibraryIcons()
+        .then((icons) => live && setLibrary(icons))
+        .catch(() => live && setError("Could not read the icon library"));
+      return () => {
+        live = false;
+      };
+    }, []);
+
+    const groups = useMemo(() => {
+      const needle = search.trim().toLowerCase();
+      const matching = needle
+        ? library.filter(
+            (entry) =>
+              entry.name.toLowerCase().includes(needle) ||
+              entry.category.toLowerCase().includes(needle),
+          )
+        : library;
+      return groupIconsByCategory(matching);
+    }, [library, search]);
 
     const applySvg = async (clean: string | null) => {
       if (!clean) {
@@ -164,7 +210,35 @@ export const actionSetShapeIcon = register<IconActionValue>({
       }
       setError(null);
       const palette = await extractPalette(clean);
+      // Decode before committing. The canvas renderer is synchronous and draws
+      // whatever is cached at that moment, and nothing schedules a repaint when
+      // a decode lands later — so without this the icon stays invisible until
+      // some other edit repaints the scene.
+      await preloadIconImage(clean);
       updateData({ kind: "set", svg: clean, palette });
+    };
+
+    const ingest = async (files: { path: string; text: string }[]) => {
+      if (files.length === 0) {
+        setError("No .svg files found in what you dropped");
+        return;
+      }
+      setImporting(true);
+      try {
+        const { imported, rejected } = await importIcons(files);
+        setLibrary(await listLibraryIcons());
+        setError(
+          rejected.length > 0
+            ? `Skipped ${rejected.length} unreadable file${
+                rejected.length === 1 ? "" : "s"
+              }, added ${imported.length}`
+            : null,
+        );
+      } catch {
+        setError("Could not save to the icon library");
+      } finally {
+        setImporting(false);
+      }
     };
 
     return (
@@ -199,6 +273,96 @@ export const actionSetShapeIcon = register<IconActionValue>({
           </div>
         </fieldset>
 
+        <fieldset>
+          <legend>My icons</legend>
+          <div
+            className={clsx("shape-icon-dropzone", { active: dropActive })}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setDropActive(true);
+            }}
+            onDragLeave={() => setDropActive(false)}
+            onDrop={async (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setDropActive(false);
+              // must read the entries before yielding: the browser empties
+              // DataTransferItemList as soon as the handler returns
+              const files = await collectDroppedSvgs(event.dataTransfer);
+              await ingest(files);
+            }}
+          >
+            {importing ? "Importing…" : "Drop a folder of SVGs here"}
+            <label
+              className="shape-icon-file"
+              title="Pick a folder of SVGs; nested folders become categories"
+            >
+              {LoadIcon}
+              Choose folder
+              <input
+                type="file"
+                accept=".svg,image/svg+xml"
+                multiple
+                // non-standard but the only way to pick a directory
+                {...{ webkitdirectory: "", directory: "" }}
+                onChange={async (event) => {
+                  const picked = Array.from(event.target.files ?? []);
+                  await ingest(
+                    await Promise.all(
+                      picked
+                        .filter((file) => /\.svg$/i.test(file.name))
+                        .map(async (file) => ({
+                          // webkitRelativePath carries the folder structure
+                          path: (file as any).webkitRelativePath || file.name,
+                          text: await file.text(),
+                        })),
+                    ),
+                  );
+                  event.target.value = "";
+                }}
+              />
+            </label>
+          </div>
+
+          {library.length > 0 && (
+            <>
+              <input
+                className="shape-icon-search"
+                type="search"
+                placeholder={`Search ${library.length} icons`}
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              <div className="shape-icon-library">
+                {groups.map(({ category, icons }) => (
+                  <div key={category || "__root"}>
+                    <div className="shape-icon-category">
+                      {category || "Uncategorised"}
+                    </div>
+                    <div className="shape-icon-grid">
+                      {icons.map((entry) => (
+                        <button
+                          key={entry.id}
+                          type="button"
+                          className="shape-icon-swatch"
+                          title={entry.name}
+                          disabled={!target}
+                          onClick={() => applySvg(entry.svg)}
+                        >
+                          <img src={svgToDataUrl(entry.svg)} alt={entry.name} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {groups.length === 0 && (
+                  <div className="shape-icon-category">No matches</div>
+                )}
+              </div>
+            </>
+          )}
+        </fieldset>
+
         {icon && (
           <>
             <fieldset>
@@ -217,6 +381,51 @@ export const actionSetShapeIcon = register<IconActionValue>({
                     updateData({ kind: "placement", placement })
                   }
                 />
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>Icon size</legend>
+              <div className="shape-icon-size">
+                <input
+                  type="range"
+                  min={MIN_ICON_SIZE}
+                  max={Math.max(
+                    MIN_ICON_SIZE,
+                    Math.min(
+                      MAX_ICON_SIZE,
+                      // no point offering sizes larger than the shape
+                      Math.round(
+                        Math.min(target!.width, target!.height) ||
+                          MAX_ICON_SIZE,
+                      ),
+                    ),
+                  )}
+                  step={1}
+                  value={Math.round(getIconSize(target!))}
+                  onChange={(event) =>
+                    updateData({
+                      kind: "size",
+                      size: Number(event.target.value),
+                    })
+                  }
+                />
+                <span className="shape-icon-size-value">
+                  {Math.round(getIconSize(target!))}px
+                  {icon.size === undefined && " (auto)"}
+                </span>
+                {icon.size !== undefined && (
+                  <button
+                    type="button"
+                    className="shape-icon-reset"
+                    title="Size the icon from the shape again"
+                    onClick={() =>
+                      updateData({ kind: "size", size: undefined })
+                    }
+                  >
+                    Auto
+                  </button>
+                )}
               </div>
             </fieldset>
 

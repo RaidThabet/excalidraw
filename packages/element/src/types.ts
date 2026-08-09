@@ -121,6 +121,11 @@ export type ShapeIconData = {
    * flag.
    */
   isContainer?: boolean;
+  /**
+   * Icon edge length in scene units. Absent means auto-size from the shape
+   * (see iconSizeFor), which is the default until the user overrides it.
+   */
+  size?: number;
 };
 
 /** Where an image's label sits relative to the image itself. */

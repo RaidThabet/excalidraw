@@ -1,4 +1,4 @@
-import { getShapeIcon } from "./shapeIcon";
+import { DEFAULT_SHAPE_ICON_PLACEMENT, getShapeIcon } from "./shapeIcon";
 
 import type { ExcalidrawElement, ShapeIconPlacement } from "./types";
 
@@ -9,6 +9,22 @@ export const ICON_TEXT_GAP = 6;
 
 export const iconSizeFor = (width: number, height: number): number =>
   Math.max(16, Math.min(64, Math.min(width, height) * 0.25));
+
+/** bounds for a manually chosen icon size */
+export const MIN_ICON_SIZE = 8;
+export const MAX_ICON_SIZE = 512;
+
+/**
+ * The icon's edge length: the user's chosen size when set, otherwise derived
+ * from the shape. Clamped so a stored value can never render inside-out or
+ * swallow the shape.
+ */
+export const getIconSize = (el: ExcalidrawElement): number => {
+  const manual = getShapeIcon(el)?.size;
+  return typeof manual === "number" && Number.isFinite(manual)
+    ? Math.max(MIN_ICON_SIZE, Math.min(MAX_ICON_SIZE, manual))
+    : iconSizeFor(el.width, el.height);
+};
 
 /**
  * Whether the icon lays the text out alongside itself ("container" shapes) or
@@ -39,7 +55,7 @@ export const getIconTextInset = (
   if (!icon?.svg || !isContainerLayout(icon)) {
     return none;
   }
-  const reserved = iconSizeFor(el.width, el.height) + ICON_TEXT_GAP;
+  const reserved = getIconSize(el) + ICON_TEXT_GAP;
 
   switch (icon.placement) {
     case "top-left":
@@ -61,8 +77,9 @@ type Layout = {
 };
 
 export const getIconTextLayout = (el: ExcalidrawElement): Layout => {
-  const placement: ShapeIconPlacement = getShapeIcon(el)?.placement ?? "center";
-  const size = iconSizeFor(el.width, el.height);
+  const placement: ShapeIconPlacement =
+    getShapeIcon(el)?.placement ?? DEFAULT_SHAPE_ICON_PLACEMENT;
+  const size = getIconSize(el);
   const p = ICON_PADDING;
   const left = el.x + p;
   const right = el.x + el.width - p - size;

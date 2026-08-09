@@ -5,6 +5,8 @@ import type {
   ShapeIconPlacement,
 } from "./types";
 
+export const DEFAULT_SHAPE_ICON_PLACEMENT: ShapeIconPlacement = "top-left";
+
 export const SHAPE_ICON_PLACEMENTS: readonly ShapeIconPlacement[] = [
   "center",
   "top-left",

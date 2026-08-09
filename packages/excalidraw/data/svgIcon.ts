@@ -21,7 +21,12 @@ export const sanitizeSvg = (input: string): string | null => {
 
 const NEUTRAL: [number, number, number] = [136, 136, 136];
 
-const svgToDataUrl = (svg: string): string =>
+/**
+ * Renders SVG as an image source rather than inlined markup. Browsers do not
+ * execute scripts in image-loaded SVG, so previewing stored icons this way is
+ * safe without having to trust what is already in the library.
+ */
+export const svgToDataUrl = (svg: string): string =>
   `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
 
 export const extractPalette = (svg: string): Promise<ShapeIconPalette> =>
