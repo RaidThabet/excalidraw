@@ -13,10 +13,12 @@
     gap: 0.25rem;
   }
 
-  // the section must never be wider than the panel that holds it
+  // The section must never be wider than the panel that holds it. No
+  // overflow clipping here: the rows below all wrap, and hiding overflow
+  // sliced the 1px ring off the left of the checkbox, which sits flush at
+  // x=0.
   fieldset:has(.shape-icon-actions) {
     max-width: 100%;
-    overflow-x: hidden;
   }
 
   .shape-icon-action {
@@ -298,10 +300,13 @@
       margin: 0;
       width: 1rem;
       height: 1rem;
-      box-shadow: 0 0 0 1px var(--color-primary);
+      // inset, so the ring stays within the box. The default ring draws
+      // outside it, and with the box flush against the panel edge that 1px
+      // was the bit getting cut off.
+      box-shadow: inset 0 0 0 1px var(--color-primary);
 
       &:focus {
-        box-shadow: 0 0 0 2px var(--color-primary);
+        box-shadow: inset 0 0 0 2px var(--color-primary);
       }
 
       svg {
