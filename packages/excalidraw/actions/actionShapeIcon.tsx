@@ -174,6 +174,7 @@ export const actionSetShapeIcon = register<IconActionValue>({
     const [search, setSearch] = useState("");
     const [importing, setImporting] = useState(false);
     const [dropActive, setDropActive] = useState(false);
+    const [mode, setMode] = useState<null | "paste" | "library">(null);
 
     const selected = app.scene
       .getSelectedElements(appState)
@@ -245,17 +246,20 @@ export const actionSetShapeIcon = register<IconActionValue>({
       <>
         <fieldset>
           <legend>Icon</legend>
-          <div className="shape-icon-source">
-            <textarea
-              className="shape-icon-textarea"
-              placeholder="Paste SVG markup"
-              value={raw}
-              onChange={(event) => setRaw(event.target.value)}
-              onBlur={() => raw.trim() && applySvg(sanitizeSvg(raw))}
-            />
-            <label className="shape-icon-file" title="Upload an SVG file">
-              {LoadIcon}
-              Upload SVG
+          {/* One compact row by default. The source controls are the rarely
+              used part, so they stay collapsed rather than filling the panel. */}
+          <div className="shape-icon-actions">
+            <button
+              type="button"
+              className={clsx("shape-icon-action", {
+                active: mode === "library",
+              })}
+              onClick={() => setMode(mode === "library" ? null : "library")}
+            >
+              Library{library.length > 0 ? ` (${library.length})` : ""}
+            </button>
+            <label className="shape-icon-action" title="Upload a single SVG">
+              Upload
               <input
                 type="file"
                 accept=".svg,image/svg+xml"
@@ -269,105 +273,127 @@ export const actionSetShapeIcon = register<IconActionValue>({
                 }}
               />
             </label>
-            {error && <div className="shape-icon-error">{error}</div>}
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>My icons</legend>
-          <div
-            className={clsx("shape-icon-dropzone", { active: dropActive })}
-            onDragOver={(event) => {
-              event.preventDefault();
-              setDropActive(true);
-            }}
-            onDragLeave={() => setDropActive(false)}
-            onDrop={async (event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              setDropActive(false);
-              // must read the entries before yielding: the browser empties
-              // DataTransferItemList as soon as the handler returns
-              const files = await collectDroppedSvgs(event.dataTransfer);
-              await ingest(files);
-            }}
-          >
-            {importing ? "Importing…" : "Drop a folder of SVGs here"}
-            <label
-              className="shape-icon-file"
-              title="Pick a folder of SVGs; nested folders become categories"
+            <button
+              type="button"
+              className={clsx("shape-icon-action", {
+                active: mode === "paste",
+              })}
+              onClick={() => setMode(mode === "paste" ? null : "paste")}
             >
-              {LoadIcon}
-              Choose folder
-              <input
-                type="file"
-                accept=".svg,image/svg+xml"
-                multiple
-                // non-standard but the only way to pick a directory
-                {...{ webkitdirectory: "", directory: "" }}
-                onChange={async (event) => {
-                  const picked = Array.from(event.target.files ?? []);
-                  await ingest(
-                    await Promise.all(
-                      picked
-                        .filter((file) => /\.svg$/i.test(file.name))
-                        .map(async (file) => ({
-                          // webkitRelativePath carries the folder structure
-                          path: (file as any).webkitRelativePath || file.name,
-                          text: await file.text(),
-                        })),
-                    ),
-                  );
-                  event.target.value = "";
-                }}
-              />
-            </label>
+              Paste
+            </button>
           </div>
 
-          {library.length > 0 && (
+          {mode === "paste" && (
+            <textarea
+              className="shape-icon-textarea"
+              placeholder="Paste SVG markup"
+              value={raw}
+              onChange={(event) => setRaw(event.target.value)}
+              onBlur={() => raw.trim() && applySvg(sanitizeSvg(raw))}
+            />
+          )}
+
+          {mode === "library" && (
             <>
-              <input
-                className="shape-icon-search"
-                type="search"
-                placeholder={`Search ${library.length} icons`}
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-              <div className="shape-icon-library">
-                {groups.map(({ category, icons }) => (
-                  <div key={category || "__root"}>
-                    <div className="shape-icon-category">
-                      {category || "Uncategorised"}
-                    </div>
-                    <div className="shape-icon-grid">
-                      {icons.map((entry) => (
-                        <button
-                          key={entry.id}
-                          type="button"
-                          className="shape-icon-swatch"
-                          title={entry.name}
-                          disabled={!target}
-                          onClick={() => applySvg(entry.svg)}
-                        >
-                          <img src={svgToDataUrl(entry.svg)} alt={entry.name} />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                {groups.length === 0 && (
-                  <div className="shape-icon-category">No matches</div>
-                )}
+              <div
+                className={clsx("shape-icon-dropzone", { active: dropActive })}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  setDropActive(true);
+                }}
+                onDragLeave={() => setDropActive(false)}
+                onDrop={async (event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setDropActive(false);
+                  // must read the entries before yielding: the browser empties
+                  // DataTransferItemList as soon as the handler returns
+                  const files = await collectDroppedSvgs(event.dataTransfer);
+                  await ingest(files);
+                }}
+              >
+                {importing ? "Importing…" : "Drop a folder of SVGs"}
+                <label
+                  className="shape-icon-file"
+                  title="Pick a folder of SVGs; nested folders become categories"
+                >
+                  {LoadIcon}
+                  Choose folder
+                  <input
+                    type="file"
+                    accept=".svg,image/svg+xml"
+                    multiple
+                    // non-standard but the only way to pick a directory
+                    {...{ webkitdirectory: "", directory: "" }}
+                    onChange={async (event) => {
+                      const picked = Array.from(event.target.files ?? []);
+                      await ingest(
+                        await Promise.all(
+                          picked
+                            .filter((file) => /\.svg$/i.test(file.name))
+                            .map(async (file) => ({
+                              // webkitRelativePath carries the folder structure
+                              path:
+                                (file as any).webkitRelativePath || file.name,
+                              text: await file.text(),
+                            })),
+                        ),
+                      );
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
               </div>
+
+              {library.length > 0 && (
+                <>
+                  <input
+                    className="shape-icon-search"
+                    type="search"
+                    placeholder={`Search ${library.length} icons`}
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                  />
+                  <div className="shape-icon-library">
+                    {groups.map(({ category, icons }) => (
+                      <div key={category || "__root"}>
+                        <div className="shape-icon-category">
+                          {category || "Uncategorised"}
+                        </div>
+                        <div className="shape-icon-grid">
+                          {icons.map((entry) => (
+                            <button
+                              key={entry.id}
+                              type="button"
+                              className="shape-icon-swatch"
+                              title={entry.name}
+                              disabled={!target}
+                              onClick={() => applySvg(entry.svg)}
+                            >
+                              <img
+                                src={svgToDataUrl(entry.svg)}
+                                alt={entry.name}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    {groups.length === 0 && (
+                      <div className="shape-icon-category">No matches</div>
+                    )}
+                  </div>
+                </>
+              )}
             </>
           )}
-        </fieldset>
 
-        {icon && (
-          <>
-            <fieldset>
-              <legend>Icon position</legend>
-              <div className="buttonList">
+          {error && <div className="shape-icon-error">{error}</div>}
+
+          {icon && (
+            <>
+              <div className="buttonList shape-icon-placements">
                 <RadioSelection<ShapeIconPlacement>
                   group="shape-icon-placement"
                   options={SHAPE_ICON_PLACEMENTS.map((placement) => ({
@@ -382,10 +408,7 @@ export const actionSetShapeIcon = register<IconActionValue>({
                   }
                 />
               </div>
-            </fieldset>
 
-            <fieldset>
-              <legend>Icon size</legend>
               <div className="shape-icon-size">
                 <input
                   type="range"
@@ -427,31 +450,31 @@ export const actionSetShapeIcon = register<IconActionValue>({
                   </button>
                 )}
               </div>
-            </fieldset>
 
-            <CheckboxItem
-              className="shape-icon-checkbox"
-              checked={isContainerLayout(icon)}
-              onChange={(isContainer) =>
-                updateData({ kind: "container", isContainer })
-              }
-            >
-              Text next to icon
-            </CheckboxItem>
+              <CheckboxItem
+                className="shape-icon-checkbox"
+                checked={isContainerLayout(icon)}
+                onChange={(isContainer) =>
+                  updateData({ kind: "container", isContainer })
+                }
+              >
+                Text next to icon
+              </CheckboxItem>
 
-            <FilledButton
-              variant="outlined"
-              color="muted"
-              size="medium"
-              fullWidth
-              label="Remove icon"
-              icon={TrashIcon}
-              onClick={() => updateData({ kind: "remove" })}
-            >
-              Remove icon
-            </FilledButton>
-          </>
-        )}
+              <FilledButton
+                variant="outlined"
+                color="muted"
+                size="medium"
+                fullWidth
+                label="Remove icon"
+                icon={TrashIcon}
+                onClick={() => updateData({ kind: "remove" })}
+              >
+                Remove icon
+              </FilledButton>
+            </>
+          )}
+        </fieldset>
       </>
     );
   },
