@@ -11,11 +11,13 @@
   "main": "main.js",
   "scripts": {
     "sync": "node scripts/sync-renderer.mjs",
-    "start": "yarn sync && electron . --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --class=excalidraw-desktop",
-    "smoke": "yarn sync && electron . --smoke --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --class=excalidraw-desktop",
-    "dist": "yarn sync && electron-builder",
+    "start": "yarn build:web && yarn sync && electron . --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations",
+    "smoke": "yarn build:web && yarn sync && electron . --smoke --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations",
+    "dist": "yarn build:web && yarn sync && electron-builder",
     "rpm": "yarn dist && node scripts/build-rpm.mjs",
-    "install-entry": "node scripts/install-desktop-entry.mjs"
+    "install-entry": "node scripts/install-desktop-entry.mjs",
+    "package": "yarn dist && node scripts/build-rpm.mjs",
+    "build:web": "yarn --cwd .. build:app:docker"
   },
   "devDependencies": {
     "electron": "^33.2.0",
@@ -34,7 +36,8 @@
     ],
     "linux": {
       "target": [
-        "AppImage"
+        "AppImage",
+        "deb"
       ],
       "category": "Graphics",
       "icon": "icon.png",

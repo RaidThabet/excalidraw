@@ -56,31 +56,49 @@ const LINUX_DISPLAY_FLAGS = [
  * even though the entry and hicolor icon are installed correctly.
  */
 const DESKTOP_FILE = `${APP_ID}.desktop`;
-if (process.platform === "linux" && !process.env.CHROME_DESKTOP) {
-  process.env.CHROME_DESKTOP = DESKTOP_FILE;
-}
 
 const RELAUNCH_GUARD = "EXCALIDRAW_DESKTOP_RELAUNCHED";
 
+/**
+ * Chromium reads CHROME_DESKTOP when the process starts, so setting it on
+ * process.env from here is too late to be trusted — it has to be present in the
+ * environment we are launched with. Different packages launch us differently
+ * (the AppImage bare, the deb's desktop entry with the ozone flags but no env),
+ * so rather than patching each launcher, relaunch once with both the flags and
+ * the env whenever either is missing.
+ */
 const needsWaylandRelaunch =
   process.platform === "linux" &&
   !!process.env.WAYLAND_DISPLAY &&
   !process.env[RELAUNCH_GUARD] &&
   // the smoke test passes the flags itself and needs to own the exit code
   !SMOKE_TEST &&
-  !process.argv.some((arg) => arg.startsWith("--ozone-platform"));
+  (!process.env.CHROME_DESKTOP ||
+    !process.argv.some((arg) => arg.startsWith("--ozone-platform")));
 
 if (needsWaylandRelaunch) {
   require("node:child_process")
-    .spawn(process.execPath, [...process.argv.slice(1), ...LINUX_DISPLAY_FLAGS], {
-      detached: true,
-      stdio: "inherit",
-      env: {
-        ...process.env,
-        [RELAUNCH_GUARD]: "1",
-        CHROME_DESKTOP: DESKTOP_FILE,
+    .spawn(
+      process.execPath,
+      [
+        ...process.argv.slice(1),
+        // a launcher may already pass some of these (the deb's desktop entry
+        // does); only add what is missing
+        ...LINUX_DISPLAY_FLAGS.filter(
+          (flag) =>
+            !process.argv.some((arg) => arg.startsWith(flag.split("=")[0])),
+        ),
+      ],
+      {
+        detached: true,
+        stdio: "inherit",
+        env: {
+          ...process.env,
+          [RELAUNCH_GUARD]: "1",
+          CHROME_DESKTOP: DESKTOP_FILE,
+        },
       },
-    })
+    )
     .unref();
   app.exit(0);
   // CommonJS wraps modules in a function, so this stops the rest from running
